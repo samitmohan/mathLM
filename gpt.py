@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -145,16 +146,26 @@ class CausalSelfAttention(nn.Module):
         return self.proj(y)
 
 
+def _round_to_multiple(n, m):
+    return ((n + m - 1) // m) * m
+
+
 class MLP(nn.Module):
-    """Position-wise feed-forward block: linear -> GELU -> linear, 4x expansion."""
+    """Gated feed-forward block (SwiGLU): two parallel projections, one gates the other."""
 
     def __init__(self, config):
         super().__init__()
-        self.fc1 = nn.Linear(config.n_embd, 4 * config.n_embd)
-        self.fc2 = nn.Linear(4 * config.n_embd, config.n_embd)
+        # (8/3)*n_embd rounded to nearest 64 keeps param count ~equal to 4x GELU expansion.
+        hidden_dim = _round_to_multiple(int(8 * config.n_embd / 3), 64)
+        self.gate = nn.Linear(config.n_embd, hidden_dim, bias=False)
+        self.fc1  = nn.Linear(config.n_embd, hidden_dim, bias=False)
+        self.fc2  = nn.Linear(hidden_dim, config.n_embd, bias=False)
+        # Mark for scaled residual init: output projection sits on the residual path.
+        self.fc2._is_residual = True
 
     def forward(self, x):
-        return self.fc2(F.gelu(self.fc1(x)))
+        # SwiGLU: gate with SiLU activation controls information flow through fc1.
+        return self.fc2(F.silu(self.gate(x)) * self.fc1(x))
 
 
 class Block(nn.Module):

@@ -44,11 +44,10 @@ train.py  data loading, learning rate schedule, training loop
 Default config: 6 layers, 6 heads, 2 KV heads, 384-dim embeddings (~10M parameters).
 
 ```
-step 0     | loss 4.1847 | lr 0.000000
 step 1000  | loss 1.5823 | lr 0.000300
 step 5000  | loss 1.0624 | lr 0.000272
-step 10000 | loss 0.5821 | lr 0.000210
-step 15000 | loss 0.2134 | lr 0.000080
+step 5800  | loss 0.9066 | lr 0.000260
+step 19600 | loss 0.1305 | lr 0.000030
 step 20000 | loss 0.1480 | lr 0.000030
 ```
 

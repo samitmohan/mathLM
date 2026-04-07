@@ -16,9 +16,11 @@ class GPTConfig:
     vocab_size: int = 50304
     seq_len: int = 1024
     n_layer: int = 12
-    n_head: int = 8
-    n_kv_head: int = 2   # for MQA/GQA
+    n_head: int = 12
+    n_kv_head: int = 3
     n_embd: int = 768
+    use_moe: bool = False   # enable sparse mixture-of-experts in feed-forward blocks
+    n_experts: int = 8      # number of experts when use_moe=True
 
 
 def norm(x):
@@ -168,19 +170,63 @@ class MLP(nn.Module):
         return self.fc2(F.silu(self.gate(x)) * self.fc1(x))
 
 
+class SparseMoE(nn.Module):
+    """Sparse mixture-of-experts: routes each token to top-2 of n_experts SwiGLU experts."""
+
+    def __init__(self, config):
+        super().__init__()
+        self.n_experts = config.n_experts
+        self.experts = nn.ModuleList([MLP(config) for _ in range(config.n_experts)])
+        self.router = nn.Linear(config.n_embd, config.n_experts, bias=False)
+
+    def forward(self, x):
+        B, T, C = x.shape
+        x_flat = x.view(B * T, C)                                      # (N, C)
+
+        logits = self.router(x_flat)                                    # (N, n_experts)
+        weights, indices = torch.topk(logits, 2, dim=-1)               # top-2
+        weights = F.softmax(weights, dim=-1)                            # (N, 2)
+
+        out = torch.zeros_like(x_flat)
+        for i, expert in enumerate(self.experts):
+            # find tokens routed to expert i in either top-2 slot
+            mask = (indices == i).any(dim=-1)                           # (N,)
+            if not mask.any():
+                continue
+            # sum weights for this expert across both slots
+            expert_w = (weights * (indices == i).float()).sum(dim=-1, keepdim=True)
+            out[mask] += expert_w[mask] * expert(x_flat[mask])
+
+        # Load-balancing auxiliary loss: penalize unequal expert usage.
+        # Minimized when all experts receive equal token fractions.
+        router_probs = F.softmax(logits, dim=-1)                       # (N, n_experts)
+        expert_frac = torch.zeros(self.n_experts, device=x.device)
+        for i in range(self.n_experts):
+            expert_frac[i] = (indices == i).float().mean()
+        aux_loss = (router_probs.mean(0) * expert_frac).sum() * self.n_experts
+
+        return out.view(B, T, C), aux_loss
+
+
 class Block(nn.Module):
-    """Single transformer layer: Pre-LN attention + Pre-LN MLP, both with residual."""
+    """Single transformer layer: Pre-LN attention + Pre-LN MLP/MoE, both with residual."""
 
     def __init__(self, config, layer_idx):
         super().__init__()
         self.layer_idx = layer_idx
         self.attn = CausalSelfAttention(config)
-        self.mlp = MLP(config)
+        # use_moe=True swaps the dense MLP for a sparse mixture-of-experts block
+        self.ff = SparseMoE(config) if config.use_moe else MLP(config)
 
     def forward(self, x, cos, sin, kv_cache=None):
         x = x + self.attn(norm(x), cos, sin, kv_cache, self.layer_idx)
-        x = x + self.mlp(norm(x))
-        return x
+        ff_out = self.ff(norm(x))
+        if isinstance(ff_out, tuple):
+            ff_out, aux_loss = ff_out
+        else:
+            aux_loss = 0.0
+        x = x + ff_out
+        return x, aux_loss
 
 
 class GPT(nn.Module):
@@ -222,8 +268,10 @@ class GPT(nn.Module):
 
         x = self.wte(idx)
 
+        total_aux_loss = 0.0
         for block in self.blocks:
-            x = block(x, self.cos, self.sin, kv_cache)
+            x, aux_loss = block(x, self.cos, self.sin, kv_cache)
+            total_aux_loss += aux_loss
 
         x = norm(x)
         logits = self.lm_head(x)
@@ -234,6 +282,8 @@ class GPT(nn.Module):
                 logits.view(-1, logits.size(-1)),
                 targets.view(-1)
             )
+            # Add auxiliary load-balancing loss when MoE is active (0.0 otherwise)
+            loss = loss + 0.01 * total_aux_loss
 
         return logits, loss
 

@@ -41,11 +41,13 @@ def load_data(path):
 
 
 def get_lr(step, warmup_steps, max_steps, max_lr, min_lr):
-    # linear warmup
+    # Phase 1: linear warmup from 0 to max_lr. Starting at zero avoids large
+    # random gradient updates before the model has any useful structure.
     if step < warmup_steps:
         return max_lr * step / warmup_steps
 
-    # cosine decay
+    # Phase 2: cosine decay from max_lr to min_lr. Cosine avoids the abrupt drop
+    # you'd get from a step schedule and smoothly approaches the final learning rate.
     if step > max_steps:
         return min_lr
 
@@ -82,7 +84,8 @@ def train():
     model.train()
     step = 0
 
-    # bf16 works on newer GPUs (Ampere+), fallback is safe
+    # bfloat16 only on CUDA: Metal and CPU lack hardware bfloat16 support.
+    # bfloat16 keeps the float32 exponent range while halving memory and compute.
     autocast_dtype = torch.bfloat16 if device == "cuda" else torch.float32
 
     for epoch in range(10):
@@ -99,6 +102,8 @@ def train():
             optimizer.zero_grad()
             loss.backward()
 
+            # Gradient clipping: rescale gradients so their norm never exceeds 1.0.
+            # Prevents large random batches early in training from destabilizing weights.
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
 
             optimizer.step()

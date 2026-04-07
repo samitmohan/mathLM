@@ -145,7 +145,7 @@ class Block(nn.Module):
         self.mlp = MLP(config)
 
     def forward(self, x, cos, sin, kv_cache=None):
-        x = x + self.attn(x, cos, sin, kv_cache, self.layer_idx)
+        x = x + self.attn(norm(x), cos, sin, kv_cache, self.layer_idx)
         x = x + self.mlp(norm(x))
         return x
 
@@ -161,7 +161,6 @@ class GPT(nn.Module):
             Block(config, i) for i in range(config.n_layer)
         ])
 
-        self.ln_f = nn.LayerNorm(config.n_embd)
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
 
         # weight tying
@@ -190,7 +189,7 @@ class GPT(nn.Module):
         for block in self.blocks:
             x = block(x, self.cos, self.sin, kv_cache)
 
-        x = self.ln_f(x)
+        x = norm(x)
         logits = self.lm_head(x)
 
         loss = None

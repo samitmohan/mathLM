@@ -43,10 +43,6 @@ class BPETokenizer:
         for merge_idx in range(n_merges):
             counts = self._count_pairs(ids)
             if not counts:
-                # Pad vocab to vocab_size with empty byte sequences when
-                # training text is exhausted before reaching the target size.
-                for pad_id in range(256 + merge_idx, vocab_size):
-                    self.vocab[pad_id] = b""
                 break
 
             # Pick most frequent adjacent pair
@@ -67,7 +63,10 @@ class BPETokenizer:
         return ids
 
     def decode(self, ids: list) -> str:
-        tokens = b"".join(self.vocab[i] for i in ids)
+        tokens = b"".join(
+            self.vocab[i] if i in self.vocab else b"\xef\xbf\xbd"  # UTF-8 replacement char
+            for i in ids
+        )
         return tokens.decode("utf-8", errors="replace")
 
     def save(self, path: str) -> None:

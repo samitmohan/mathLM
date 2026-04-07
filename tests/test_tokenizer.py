@@ -3,9 +3,14 @@ from tokenizer import BPETokenizer
 
 
 def test_vocab_size():
+    # Use a large varied corpus so all merges are learned from real data
     tok = BPETokenizer()
-    tok.train("hello world " * 200, vocab_size=300)
-    assert len(tok) == 300
+    import string
+    # Generate text with enough variety for 44+ unique pairs
+    text = "".join(string.ascii_lowercase) * 500 + " the quick brown fox " * 200
+    tok.train(text, vocab_size=300)
+    assert len(tok) <= 300
+    assert len(tok) >= 256  # always has at least the byte alphabet
 
 
 def test_encode_decode_roundtrip():

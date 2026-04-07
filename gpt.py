@@ -3,6 +3,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+"""
+Minimal GPT with modern transformer features: RMSNorm, RoPE positional embeddings,
+Grouped Query Attention (GQA), QK-norm, and KV cache for efficient autoregressive
+generation. ~225 lines. No custom CUDA, no external dependencies beyond PyTorch.
+"""
+
 
 @dataclass
 class GPTConfig:
@@ -20,7 +26,8 @@ def norm(x):
 
 
 def apply_rotary(x, cos, sin):
-    # x: (B, T, H, D)
+    # x: (B, T, H, D). Split last dim into pairs: each pair (x1_i, x2_i) is a 2D
+    # point rotated by angle theta_i. Standard 2D rotation: x*cos - y*sin, x*sin + y*cos.
     d = x.shape[-1] // 2
     x1, x2 = x[..., :d], x[..., d:]
 
@@ -31,6 +38,8 @@ def apply_rotary(x, cos, sin):
 
 
 def precompute_rotary(seq_len, head_dim, device):
+    # Base 10000 from original RoPE paper (Su et al. 2021). Larger base = slower
+    # rotation per dimension = longer effective context range.
     inv_freq = 1.0 / (10000 ** (torch.arange(0, head_dim, 2, device=device) / head_dim))
     t = torch.arange(seq_len, device=device)
 
@@ -42,6 +51,8 @@ def precompute_rotary(seq_len, head_dim, device):
 
 
 class KVCache:
+    """Stores past keys and values per layer to skip recomputing them each decode step."""
+
     def __init__(self, n_layer):
         self.k = [None] * n_layer
         self.v = [None] * n_layer
@@ -60,6 +71,8 @@ class KVCache:
 
 def repeat_kv(x, n_rep):
     # x: (B, H_kv, T, D) → (B, H, T, D)
+    # expand() creates a view (no memory copy); reshape materializes only when needed.
+    # Gives each query head a matching key/value without duplicating data.
     if n_rep == 1:
         return x
 
@@ -70,6 +83,8 @@ def repeat_kv(x, n_rep):
 
 
 class CausalSelfAttention(nn.Module):
+    """Multi-head attention with GQA, RoPE, and QK-norm. Supports KV cache at inference."""
+
     def __init__(self, config):
         super().__init__()
 
@@ -81,7 +96,8 @@ class CausalSelfAttention(nn.Module):
         assert self.n_embd % self.n_head == 0
         assert self.n_head % self.n_kv_head == 0
 
-        # separate projections (needed for MQA/GQA)
+        # Q has n_head outputs; K/V have n_kv_head outputs - different sizes require
+        # separate projections. Fusing them would need awkward slicing.
         self.q_proj = nn.Linear(self.n_embd, self.n_head * self.head_dim, bias=False)
         self.k_proj = nn.Linear(self.n_embd, self.n_kv_head * self.head_dim, bias=False)
         self.v_proj = nn.Linear(self.n_embd, self.n_kv_head * self.head_dim, bias=False)
@@ -100,6 +116,7 @@ class CausalSelfAttention(nn.Module):
         q = apply_rotary(q, cos[:, :T], sin[:, :T])
         k = apply_rotary(k, cos[:, :T], sin[:, :T])
 
+        # QK-norm: normalizing Q and K prevents attention logit explosion at long sequences.
         q, k = norm(q), norm(k)
 
         # (B, H, T, D)
@@ -120,7 +137,8 @@ class CausalSelfAttention(nn.Module):
         if kv_cache is None or T > 1:
             y = F.scaled_dot_product_attention(q, k, v, is_causal=True)
         else:
-            # single-token decoding (already causal via cache)
+            # Single-token decode: KV cache holds all prior context, no future tokens
+            # exist to mask, so causal masking is both unnecessary and incorrect here.
             y = F.scaled_dot_product_attention(q, k, v, is_causal=False)
 
         y = y.transpose(1, 2).contiguous().view(B, -1, C)
@@ -128,6 +146,8 @@ class CausalSelfAttention(nn.Module):
 
 
 class MLP(nn.Module):
+    """Position-wise feed-forward block: linear -> GELU -> linear, 4x expansion."""
+
     def __init__(self, config):
         super().__init__()
         self.fc1 = nn.Linear(config.n_embd, 4 * config.n_embd)
@@ -138,6 +158,8 @@ class MLP(nn.Module):
 
 
 class Block(nn.Module):
+    """Single transformer layer: Pre-LN attention + Pre-LN MLP, both with residual."""
+
     def __init__(self, config, layer_idx):
         super().__init__()
         self.layer_idx = layer_idx
@@ -151,6 +173,8 @@ class Block(nn.Module):
 
 
 class GPT(nn.Module):
+    """Full transformer language model with weight-tied embeddings and precomputed RoPE."""
+
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -163,7 +187,8 @@ class GPT(nn.Module):
 
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
 
-        # weight tying
+        # Weight tying: embedding rows and unembedding columns encode the same token
+        # similarity geometry. Sharing weights halves parameters with no quality loss.
         self.lm_head.weight = self.wte.weight
 
         # rotary cache

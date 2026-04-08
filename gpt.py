@@ -307,13 +307,15 @@ class GPT(nn.Module):
                 v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
                 logits[logits < v[:, [-1]]] = -float("inf")
 
+            # top_k first, then top_p on the remaining candidates (HuggingFace convention)
             if top_p is not None:
                 # Nucleus sampling: keep the smallest set of tokens whose
                 # cumulative probability exceeds top_p.
                 sorted_logits, sorted_idx = torch.sort(logits, descending=True, dim=-1)
-                cumprobs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
+                sorted_probs = F.softmax(sorted_logits, dim=-1)
+                cumprobs = torch.cumsum(sorted_probs, dim=-1)
                 # Shift right so the token that crosses top_p is kept, not removed.
-                remove = (cumprobs - F.softmax(sorted_logits, dim=-1)) > top_p
+                remove = (cumprobs - sorted_probs) > top_p
                 sorted_logits[remove] = -float("inf")
                 logits = torch.zeros_like(logits).scatter_(1, sorted_idx, sorted_logits)
 

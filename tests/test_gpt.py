@@ -84,3 +84,30 @@ def test_gpt_forward_moe():
     logits, loss = model(idx, idx)
     assert logits.shape == (1, 10, 100)
     assert loss is not None and loss.ndim == 0
+
+
+def test_generate_top_p_shape():
+    config = small_config()
+    model = GPT(config)
+    idx = torch.zeros((1, 5), dtype=torch.long)
+    out = model.generate(idx, max_new_tokens=10, top_p=0.9)
+    assert out.shape == (1, 15)
+
+
+def test_generate_top_k_and_top_p():
+    config = small_config()
+    model = GPT(config)
+    idx = torch.zeros((1, 5), dtype=torch.long)
+    out = model.generate(idx, max_new_tokens=10, top_k=10, top_p=0.9)
+    assert out.shape == (1, 15)
+
+
+def test_scaled_residual_init():
+    config = small_config(n_layer=4)
+    model = GPT(config)
+    # residual projections should have smaller std than 0.02
+    expected_std = 0.02 / math.sqrt(2 * config.n_layer)
+    for block in model.blocks:
+        w = block.attn.proj.weight
+        # std should be roughly expected_std (within 3x for random init)
+        assert w.std().item() < 0.02

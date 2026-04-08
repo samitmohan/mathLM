@@ -106,6 +106,7 @@ class CausalSelfAttention(nn.Module):
         self.v_proj = nn.Linear(self.n_embd, self.n_kv_head * self.head_dim, bias=False)
 
         self.proj = nn.Linear(self.n_embd, self.n_embd, bias=False)
+        self.proj._is_residual = True  # output projection sits on the residual stream
 
     def forward(self, x, cos, sin, kv_cache=None, layer_idx=None):
         B, T, C = x.size()
@@ -259,7 +260,12 @@ class GPT(nn.Module):
 
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
-            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            # Residual output projections use smaller std to prevent gradient explosion
+            # at depth. Scaled by 1/sqrt(2*n_layer) following GPT-2's implementation.
+            std = 0.02
+            if getattr(module, "_is_residual", False):
+                std = 0.02 / math.sqrt(2 * self.config.n_layer)
+            torch.nn.init.normal_(module.weight, mean=0.0, std=std)
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
@@ -289,23 +295,30 @@ class GPT(nn.Module):
         return logits, loss
 
     @torch.no_grad()
-    def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None):
+    def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None, top_p=None):
         kv_cache = KVCache(len(self.blocks))
 
         for _ in range(max_new_tokens):
-
-            idx_cond = idx[:, -1:]  # only last token
+            idx_cond = idx[:, -1:]
             logits, _ = self(idx_cond, kv_cache=kv_cache)
-
             logits = logits[:, -1, :] / temperature
 
             if top_k is not None:
-                v, _ = torch.topk(logits, top_k)
+                v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
                 logits[logits < v[:, [-1]]] = -float("inf")
+
+            if top_p is not None:
+                # Nucleus sampling: keep the smallest set of tokens whose
+                # cumulative probability exceeds top_p.
+                sorted_logits, sorted_idx = torch.sort(logits, descending=True, dim=-1)
+                cumprobs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
+                # Shift right so the token that crosses top_p is kept, not removed.
+                remove = (cumprobs - F.softmax(sorted_logits, dim=-1)) > top_p
+                sorted_logits[remove] = -float("inf")
+                logits = torch.zeros_like(logits).scatter_(1, sorted_idx, sorted_logits)
 
             probs = F.softmax(logits, dim=-1)
             next_token = torch.multinomial(probs, num_samples=1)
-
             idx = torch.cat((idx, next_token), dim=1)
 
         return idx

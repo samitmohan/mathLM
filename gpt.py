@@ -202,7 +202,8 @@ class SparseMoE(nn.Module):
         router_probs = F.softmax(logits, dim=-1)                       # (N, n_experts)
         expert_frac = torch.zeros(self.n_experts, device=x.device)
         for i in range(self.n_experts):
-            expert_frac[i] = (indices == i).float().mean()
+            # fraction of tokens routed to expert i (token visits at least one slot)
+            expert_frac[i] = (indices == i).any(dim=-1).float().mean()
         aux_loss = (router_probs.mean(0) * expert_frac).sum() * self.n_experts
 
         return out.view(B, T, C), aux_loss

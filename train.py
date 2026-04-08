@@ -31,7 +31,7 @@ def get_lr(step, warmup_steps, max_steps, max_lr, min_lr):
         return max_lr * step / warmup_steps
     # Phase 2: cosine decay from max_lr to min_lr. Cosine avoids the abrupt drop
     # you'd get from a step schedule and smoothly approaches the final learning rate.
-    if step > max_steps:
+    if step >= max_steps:
         return min_lr
     decay_ratio = (step - warmup_steps) / (max_steps - warmup_steps)
     coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio))
@@ -95,6 +95,8 @@ def train():
     # Resume from checkpoint if one exists.
     step = 0
     if os.path.exists("checkpoint.pt"):
+        # weights_only=False is required because the checkpoint contains a GPTConfig
+        # dataclass, not just tensors. Only load checkpoints you produced yourself.
         ckpt = torch.load("checkpoint.pt", map_location=device, weights_only=False)
         model.load_state_dict(ckpt["model"])
         optimizer.load_state_dict(ckpt["optimizer"])
@@ -155,8 +157,11 @@ def train():
         if step > 0 and step % eval_interval == 0:
             val_loss = evaluate(model, val_loader, device, autocast_dtype)
             print(f"step {step:5d} | val_loss {val_loss:.4f} | val_ppl {math.exp(val_loss):.2f}")
+            # Save from the uncompiled module so the checkpoint can be loaded
+            # before torch.compile on resume (compiled models add _orig_mod. prefix).
+            raw_model = model._orig_mod if hasattr(model, "_orig_mod") else model
             torch.save({
-                "model": model.state_dict(),
+                "model": raw_model.state_dict(),
                 "optimizer": optimizer.state_dict(),
                 "step": step,
                 "config": config,

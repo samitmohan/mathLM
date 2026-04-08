@@ -7,6 +7,7 @@ Usage:
     python generate.py --prompt "CHAPTER I" --tokens 500 --top_p 0.9 --temperature 0.8
 """
 import argparse
+import os
 import torch
 from gpt import GPT
 from tokenizer import BPETokenizer
@@ -20,6 +21,13 @@ def main():
     parser.add_argument("--top_p",       type=float, default=0.9)
     parser.add_argument("--temperature", type=float, default=1.0)
     args = parser.parse_args()
+
+    if args.temperature <= 0:
+        raise ValueError("--temperature must be > 0")
+    if not os.path.exists("tokenizer.json"):
+        raise FileNotFoundError("tokenizer.json not found - run train.py first")
+    if not os.path.exists("checkpoint.pt"):
+        raise FileNotFoundError("checkpoint.pt not found - run train.py first")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -39,6 +47,7 @@ def main():
     print(f"tokenizer: {len(tok)} tokens")
     print()
 
+    # No BOS token in this tokenizer; seed with null byte (token 0) when no prompt given.
     prompt_ids = tok.encode(args.prompt) if args.prompt else [0]
     idx = torch.tensor([prompt_ids], dtype=torch.long, device=device)
 
@@ -46,6 +55,7 @@ def main():
     print(args.prompt if args.prompt else "(empty)")
     print("--- generated ---")
 
+    # GPT.generate is decorated with @torch.no_grad() - no gradient tracking occurs.
     out = model.generate(
         idx,
         max_new_tokens=args.tokens,

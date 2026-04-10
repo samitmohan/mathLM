@@ -43,4 +43,40 @@
 [2K  [2mstep[0m [1m [0m[1;36m2400[0m  │  [31mloss [0m[1;31m4.8440[0m  │  [2mlr[0m [1;36m2.96e-04[0m  │  [2mgnorm[0m [1;36m0.924[0m  │  [36mtok/s [0m[1;36m479720[0m29[0m
 [2K  [2mstep[0m [1m [0m[1;36m2500[0m  │  [31mloss [0m[1;31m4.8229[0m  │  [2mlr[0m [1;36m2.96e-04[0m  │  [2mgnorm[0m [1;36m0.912[0m  │  [36mtok/s [0m[1;36m484098[0m56[0m
 [2K  [2mstep[0m [1m [0m[1;36m2600[0m  │  [31mloss [0m[1;31m4.9316[0m  │  [2mlr[0m [1;36m2.95e-04[0m  │  [2mgnorm[0m [1;36m1.069[0m  │  [36mtok/s [0m[1;36m484841[0m0m
-[2K[1;36mtraining[0m [38;2;249;38;114m━━━━━[0m[38;5;237m╺[0m[38;5;237m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [35m 13%  step 2646/20000[0m • [33m0:36:55[0m • [36m0:19:43[0m
+[2K  [2mstep[0m [1m [0m[1;36m2700[0m  │  [31mloss [0m[1;31m4.8017[0m  │  [2mlr[0m [1;36m2.95e-04[0m  │  [2mgnorm[0m [1;36m0.906[0m  │  [36mtok/s [0m[1;36m506219[0m
+[2K  [2mstep[0m [1m [0m[1;36m2800[0m  │  [31mloss [0m[1;31m4.7738[0m  │  [2mlr[0m [1;36m2.94e-04[0m  │  [2mgnorm[0m [1;36m1.106[0m  │  [36mtok/s [0m[1;36m513705[0m59[0m
+[2K  [2mstep[0m [1m [0m[1;36m2900[0m  │  [31mloss [0m[1;31m4.7018[0m  │  [2mlr[0m [1;36m2.93e-04[0m  │  [2mgnorm[0m [1;36m0.934[0m  │  [36mtok/s [0m[1;36m513533[0m38[0m
+[2K  [2mstep[0m [1m [0m[1;36m3000[0m  │  [31mloss [0m[1;31m4.6731[0m  │  [2mlr[0m [1;36m2.93e-04[0m  │  [2mgnorm[0m [1;36m0.891[0m  │  [36mtok/s [0m[1;36m522941[0m15[0m
+[2KException ignored in: <function _MultiProcessingDataLoaderIter.__del__ at 0x7f226d2135e0>━━━━━━━━━━━━━━━━━━━[0m [35m 15%  step 3001/20000[0m • [33m0:51:13[0m • [36m0:18:13[0m
+[2KTraceback (most recent call last):━━━━━━[0m[38;5;237m╺[0m[38;5;237m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [35m 15%  step 3001/20000[0m • [33m0:51:13[0m • [36m0:18:13[0m
+[2K  File "/home/cv-gpu-2/anaconda3/envs/phone/lib/python3.9/site-packages/torch/utils/data/dataloader.py", line 1664, in __del__001/20000[0m • [33m0:51:13[0m • [36m0:18:13[0m
+[2K    self._shutdown_workers()8;114m━━━━━━[0m[38;5;237m╺[0m[38;5;237m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [35m 15%  step 3001/20000[0m • [33m0:51:13[0m • [36m0:18:13[0m
+[2K  File "/home/cv-gpu-2/anaconda3/envs/phone/lib/python3.9/site-packages/torch/utils/data/dataloader.py", line 1628, in _shutdown_workers[0m • [33m0:51:13[0m • [36m0:18:13[0m
+[2K    w.join(timeout=_utils.MP_STATUS_CHECK_INTERVAL)237m╺[0m[38;5;237m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [35m 15%  step 3001/20000[0m • [33m0:51:13[0m • [36m0:18:13[0m
+[2K  File "/home/cv-gpu-2/anaconda3/envs/phone/lib/python3.9/multiprocessing/process.py", line 149, in join[0m [35m 15%  step 3001/20000[0m • [33m0:51:13[0m • [36m0:18:13[0m
+[2K    res = self._popen.wait(timeout)━━━━━[0m[38;5;237m╺[0m[38;5;237m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [35m 15%  step 3001/20000[0m • [33m0:51:13[0m • [36m0:18:13[0m
+[2K  File "/home/cv-gpu-2/anaconda3/envs/phone/lib/python3.9/multiprocessing/popen_fork.py", line 40, in wait0m [35m 15%  step 3001/20000[0m • [33m0:51:13[0m • [36m0:18:13[0m
+[2K    if not wait([self.sentinel], timeout):0m[38;5;237m╺[0m[38;5;237m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [35m 15%  step 3001/20000[0m • [33m0:51:13[0m • [36m0:18:13[0m
+[2K  File "/home/cv-gpu-2/anaconda3/envs/phone/lib/python3.9/multiprocessing/connection.py", line 931, in waitm [35m 15%  step 3001/20000[0m • [33m0:51:13[0m • [36m0:18:13[0m
+[2K    ready = selector.select(timeout)━━━━[0m[38;5;237m╺[0m[38;5;237m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [35m 15%  step 3001/20000[0m • [33m0:51:13[0m • [36m0:18:13[0m
+[2K  File "/home/cv-gpu-2/anaconda3/envs/phone/lib/python3.9/selectors.py", line 416, in select━━━━━━━━━━━━[0m [35m 15%  step 3001/20000[0m • [33m0:51:13[0m • [36m0:18:13[0m
+[2K    fd_event_list = self._selector.poll(timeout);5;237m╺[0m[38;5;237m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [35m 15%  step 3001/20000[0m • [33m0:51:13[0m • [36m0:18:13[0m
+[2KKeyboardInterrupt: 8;2;249;38;114m━━━━━━[0m[38;5;237m╺[0m[38;5;237m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [35m 15%  step 3001/20000[0m • [33m0:51:13[0m • [36m0:18:13[0m
+[2K[1;36mtraining[0m [38;2;249;38;114m━━━━━━[0m[38;5;237m╺[0m[38;5;237m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m [35m 15%  step 3001/20000[0m • [33m0:51:13[0m • [36m0:18:13[0m
+[?25h
+Traceback (most recent call last):
+  File "/home/cv-gpu-2/samit_workspace/personal/nanochat/training.py", line 272, in <module>
+    train()
+  File "/home/cv-gpu-2/samit_workspace/personal/nanochat/training.py", line 234, in train
+    val_loss = evaluate(model, val_loader, device, autocast_dtype)
+  File "/home/cv-gpu-2/samit_workspace/personal/nanochat/training.py", line 85, in evaluate
+    total_loss += loss.item() * x.size(0)  # accumulate sample-weighted sum
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/home/cv-gpu-2/samit_workspace/personal/nanochat/training.py", line 272, in <module>
+    train()
+  File "/home/cv-gpu-2/samit_workspace/personal/nanochat/training.py", line 234, in train
+    val_loss = evaluate(model, val_loader, device, autocast_dtype)
+  File "/home/cv-gpu-2/samit_workspace/personal/nanochat/training.py", line 85, in evaluate
+    total_loss += loss.item() * x.size(0)  # accumulate sample-weighted sum
+KeyboardInterrupt

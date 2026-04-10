@@ -3,5 +3,6 @@ __pycache__/
 *.pyo
 *.pth
 *.pt
+wandb/
 .DS_Store
 tokenizer.json

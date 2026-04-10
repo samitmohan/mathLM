@@ -17,3 +17,5 @@ config: {'vocab_size': 50304, 'sequence_length': 128, 'number_layers': 4, 'numbe
 2026-04-10 11:55:06,517 INFO    MainThread:5972 [wandb_run.py:_redirect():2442] Wrapping output streams.
 2026-04-10 11:55:06,517 INFO    MainThread:5972 [wandb_run.py:_redirect():2465] Redirects installed.
 2026-04-10 11:55:06,520 INFO    MainThread:5972 [wandb_init.py:init():1082] run started, returning control to user process
+2026-04-10 12:46:19,874 INFO    wandb-AsyncioManager-main:5972 [service_client.py:_forward_responses():134] Reached EOF.
+2026-04-10 12:46:19,874 INFO    wandb-AsyncioManager-main:5972 [mailbox.py:close():155] Closing mailbox, abandoning 1 handles.

@@ -137,7 +137,7 @@ def train():
     max_lr = 3e-4
     min_lr = 3e-5
     grad_accum_steps = 1
-    eval_interval = 1000
+    eval_interval = 5000
 
     # bfloat16 only on CUDA: Metal and CPU lack hardware bfloat16 support
     autocast_dtype = torch.bfloat16 if device == "cuda" else torch.float32
@@ -171,7 +171,7 @@ def train():
             resume="allow",
         )
     else:
-        console.print("  [dim]wandb not installed — run [bold]pip install wandb[/bold] for experiment tracking[/dim]")
+        console.print("[dim]wandb not installed — run [bold]pip install wandb[/bold] for experiment tracking[/dim]")
 
     # train loop
     model.train()

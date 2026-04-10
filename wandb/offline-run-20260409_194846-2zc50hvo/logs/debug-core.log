@@ -1,1 +1,6 @@
-/home/cv-gpu-2/.cache/wandb/logs/core-debug-20260409_194846.log
+{"time":"2026-04-09T19:48:46.785007869+05:30","level":"INFO","msg":"main: starting server","port-filename":"/tmp/tmptcps9yr2/port-83662.txt","pid":83662,"log-level":0,"disable-analytics":false,"shutdown-on-parent-exit":false,"enable-dcgm-profiling":false}
+{"time":"2026-04-09T19:48:46.78595724+05:30","level":"INFO","msg":"server: will exit if parent process dies","ppid":83662}
+{"time":"2026-04-09T19:48:46.785902356+05:30","level":"INFO","msg":"server: accepting connections","addr":{"Name":"/tmp/wandb-83662-84087-3507910991/socket","Net":"unix"}}
+{"time":"2026-04-09T19:48:46.94807534+05:30","level":"INFO","msg":"connection: ManageConnectionData: new connection created","id":"1(@)"}
+{"time":"2026-04-09T19:48:47.142261295+05:30","level":"INFO","msg":"handleInformInit: received","streamId":"2zc50hvo","id":"1(@)"}
+{"time":"2026-04-09T19:48:47.275816589+05:30","level":"INFO","msg":"handleInformInit: stream started","streamId":"2zc50hvo","id":"1(@)"}

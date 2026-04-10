@@ -1,0 +1,117 @@
+<System>: You are a helpful math assistant. Provide clear, step-by-step reasoning when useful.
+
+<User>: What is 2+2? <Assistant>: 2 + 2 = 4.
+
+<User>: Solve for x: 2x + 5 = 13 <Assistant>: 2x + 5 = 13
+Subtract 5 from both sides:
+2x = 8
+Divide by 2:
+x = 4
+
+<User>: derivative of x^2? <Assistant>: The derivative of x^2 is 2x.
+
+<User>: differentiate x^3 <Assistant>: Using the power rule, d/dx (x^n) = n*x^(n-1)
+So, d/dx (x^3) = 3x^2.
+
+<User>: what is d/dx of sin(x) <Assistant>: The derivative of sin(x) is cos(x).
+
+<User>: integrate x dx <Assistant>: ∫ x dx = x^2 / 2 + C.
+
+<User>: integrate x^2 <Assistant>: ∫ x^2 dx = x^3 / 3 + C.
+
+<User>: what is derivative of ln(x) <Assistant>: The derivative of ln(x) is 1/x.
+
+<User>: derivative of e^x <Assistant>: The derivative of e^x is e^x.
+
+<User>: solve x^2 - 4 = 0 <Assistant>: x^2 - 4 = 0
+Factor:
+(x - 2)(x + 2) = 0
+So, x = 2 or x = -2.
+
+<User>: expand (a+b)^2 <Assistant>: (a + b)^2 = a^2 + 2ab + b^2.
+
+<User>: expand (x-3)^2 <Assistant>: (x - 3)^2 = x^2 - 6x + 9.
+
+<User>: what is 5 factorial <Assistant>: 5! = 5 × 4 × 3 × 2 × 1 = 120.
+
+<User>: what is 7! <Assistant>: 7! = 5040.
+
+<User>: simplify 3x + 2x <Assistant>: 3x + 2x = 5x.
+
+<User>: simplify 10x - 3x <Assistant>: 10x - 3x = 7x.
+
+<User>: probability of heads in fair coin <Assistant>: A fair coin has two outcomes.
+Probability of heads = 1/2.
+
+<User>: probability of getting 1 on dice <Assistant>: A fair die has 6 outcomes.
+Probability = 1/6.
+
+<User>: dot product [1,2,3] and [4,5,6] <Assistant>: 1*4 + 2*5 + 3*6 = 4 + 10 + 18 = 32.
+
+<User>: limit of (1+1/n)^n <Assistant>: The limit as n → ∞ is e.
+
+<User>: solve x/3 = 9 <Assistant>: Multiply both sides by 3:
+x = 27.
+
+<User>: solve 3x = 12 <Assistant>: Divide both sides by 3:
+x = 4.
+
+<User>: derivative of 3x^2 <Assistant>: d/dx (3x^2) = 6x.
+
+<User>: derivative of 5x^3 <Assistant>: d/dx (5x^3) = 15x^2.
+
+<User>: integrate 3x <Assistant>: ∫ 3x dx = 3x^2 / 2 + C.
+
+<User>: integrate constant 4 <Assistant>: ∫ 4 dx = 4x + C.
+
+<User>: solve x^2 = 9 <Assistant>: x = ±3.
+
+<User>: solve 4x + 1 = 9 <Assistant>: 4x + 1 = 9
+Subtract 1:
+4x = 8
+Divide by 4:
+x = 2.
+
+<User>: what is cos(0) <Assistant>: cos(0) = 1.
+
+<User>: what is sin(0) <Assistant>: sin(0) = 0.
+
+<User>: what is tan(0) <Assistant>: tan(0) = 0.
+
+<User>: derivative of cos(x) <Assistant>: The derivative of cos(x) is -sin(x).
+
+<User>: derivative of tan(x) <Assistant>: The derivative of tan(x) is sec^2(x).
+
+<User>: integrate sin(x) <Assistant>: ∫ sin(x) dx = -cos(x) + C.
+
+<User>: integrate cos(x) <Assistant>: ∫ cos(x) dx = sin(x) + C.
+
+<User>: simplify 2(x+3) <Assistant>: 2(x + 3) = 2x + 6.
+
+<User>: expand (x+1)(x+2) <Assistant>: (x + 1)(x + 2) = x^2 + 3x + 2.
+
+<User>: solve x^2 + 5x + 6 = 0 <Assistant>: Factor:
+(x + 2)(x + 3) = 0
+So, x = -2 or x = -3.
+
+<User>: derivative of sqrt(x) <Assistant>: d/dx (√x) = 1 / (2√x).
+
+<User>: integrate 1/x <Assistant>: ∫ 1/x dx = ln|x| + C.
+
+<User>: simplify 4x - x <Assistant>: 4x - x = 3x.
+
+<User>: what is 10 choose 2 <Assistant>: C(10,2) = 10*9 / 2 = 45.
+
+<User>: what is 0 factorial <Assistant>: 0! = 1.
+
+<User>: derivative of x^4 <Assistant>: d/dx (x^4) = 4x^3.
+
+<User>: derivative of x^5 <Assistant>: d/dx (x^5) = 5x^4.
+
+<User>: integrate x^4 <Assistant>: ∫ x^4 dx = x^5 / 5 + C.
+
+<User>: solve 2x - 6 = 0 <Assistant>: 2x - 6 = 0
+Add 6:
+2x = 6
+Divide by 2:
+x = 3.

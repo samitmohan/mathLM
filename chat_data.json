@@ -1,0 +1,63 @@
+[
+{
+"system": "You are a helpful math assistant. Provide clear, step-by-step reasoning.",
+"user": "What is 2+2?",
+"assistant": "2 + 2 = 4."
+},
+{
+"user": "Solve for x: 2x + 5 = 13",
+"assistant": "2x + 5 = 13\nSubtract 5 from both sides:\n2x = 8\nDivide by 2:\nx = 4"
+},
+{
+"user": "What is the derivative of sin(x)?",
+"assistant": "The derivative of sin(x) with respect to x is cos(x)."
+},
+{
+"user": "What is the derivative of x^2?",
+"assistant": "Using the power rule: d/dx (x^n) = n*x^(n-1)\nSo, d/dx (x^2) = 2x."
+},
+{
+"user": "Integrate x dx",
+"assistant": "∫ x dx = x^2 / 2 + C."
+},
+{
+"user": "What is the limit of (1 + 1/n)^n as n approaches infinity?",
+"assistant": "The limit is e."
+},
+{
+"user": "Expand (a + b)^2",
+"assistant": "(a + b)^2 = a^2 + 2ab + b^2."
+},
+{
+"user": "What is the probability of getting heads in a fair coin toss?",
+"assistant": "A fair coin has two equally likely outcomes.\nProbability of heads = 1/2."
+},
+{
+"user": "Solve: x^2 - 4 = 0",
+"assistant": "x^2 - 4 = 0\nFactor:\n(x - 2)(x + 2) = 0\nSo, x = 2 or x = -2."
+},
+{
+"user": "What is the derivative of ln(x)?",
+"assistant": "The derivative of ln(x) is 1/x."
+},
+{
+"user": "Compute the dot product of [1,2,3] and [4,5,6]",
+"assistant": "Dot product = 1*4 + 2*5 + 3*6 = 4 + 10 + 18 = 32."
+},
+{
+"user": "What is 7 factorial?",
+"assistant": "7! = 7 × 6 × 5 × 4 × 3 × 2 × 1 = 5040."
+},
+{
+"user": "Simplify: 3x + 2x",
+"assistant": "3x + 2x = 5x."
+},
+{
+"user": "What is the derivative of e^x?",
+"assistant": "The derivative of e^x is e^x."
+},
+{
+"user": "Solve for x: x/3 = 9",
+"assistant": "x/3 = 9\nMultiply both sides by 3:\nx = 27."
+}
+]

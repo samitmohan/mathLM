@@ -1,134 +1,124 @@
-# nanochat
+# mathLM
 
-From-scratch GPT in ~500 lines of PyTorch. Byte-level BPE tokenizer, SwiGLU MLP,
-Sparse MoE (optional), top-p sampling, GQA, RoPE, KV cache. Train on any text corpus.
-
-## What this is
-
-A transformer implementation that covers the core architecture of modern LLMs
-(LLaMA, GPT-2) without the production complexity. Every design decision has a
-comment explaining the "why" - written to be read alongside any modern LLM explainer.
-
-Default config is ~124M parameters (GPT-2 scale), tuned for a 24GB GPU with a
-small corpus. Character-to-subword: BPE tokenizer trained from scratch on your corpus.
+GPT trained from scratch — pretrain on OpenWebMath, SFT into a math chat model.  
+Architecture: tiktoken BPE, SwiGLU MLP, Sparse MoE (optional), GQA, RoPE, KV cache, weight tying, scaled residual init.
 
 ## Architecture
 
 | Component     | Choice             | Why                                                              |
 |---------------|--------------------|------------------------------------------------------------------|
 | Tokenizer     | Byte-level BPE     | Byte alphabet eliminates unknown tokens; merges compress common patterns |
-| MLP           | SwiGLU             | Gated activation: `fc2(silu(gate(x)) * fc1(x))` - better than GELU at same param count |
-| MoE           | Sparse top-2       | Routes each token to 2 of N experts; scales capacity without scaling compute |
-| Normalization | RMSNorm            | No learned scale/bias - cheaper, matches LayerNorm quality       |
+| MLP           | SwiGLU             | `fc2(silu(gate(x)) * fc1(x))` — gated activation, better gradient flow than GELU |
+| MoE           | Sparse top-2       | Each token routes to 2 of N experts; scales capacity without scaling compute |
+| Normalization | RMSNorm (pre-norm) | Applied before attention and MLP; no learned scale/bias, cheaper than LayerNorm |
 | Position enc. | RoPE               | Relative position appears directly in the attention dot product  |
-| Attention     | GQA (12Q / 3KV)    | K/V heads are the memory bottleneck at inference; share across query groups |
-| Inference     | KV cache           | Skip recomputing past keys/values at each generation step        |
-| Embeddings    | Weight-tied        | Input and output embeddings share the same token geometry        |
-| Init          | Scaled residual    | Output projections initialized with `0.02/sqrt(2*n_layer)` std to prevent gradient explosion |
+| Attention     | GQA (12Q / 3KV)    | Fewer KV heads reduces memory at inference; shared across query groups |
+| Inference     | KV cache           | Past keys/values cached so only one token is processed per generation step |
 
-## Quick start
+## Install
 
 ```bash
-pip install torch numpy
+pip install torch numpy tiktoken datasets rich wandb
 ```
 
-Put your training corpus in `input.txt`, then:
+## Running
+
+**Step 1 — download training data (OpenWebMath)**
 
 ```bash
-python train.py
+python dataset.py
 ```
 
-The tokenizer trains on first run and is cached to `tokenizer.json`. Resumes from
-`checkpoint.pt` automatically if it exists. Validation loss and perplexity are logged
-every 500 steps.
+Downloads ~70k examples from `open-web-math/open-web-math` and writes `openwebmath.txt`. Requires a network connection and takes a few minutes.
 
-## Generating text
+**Step 2 — pretrain**
 
 ```bash
-python generate.py
-python generate.py --prompt "To be or not"
-python generate.py --prompt "CHAPTER I" --tokens 500 --top_p 0.9 --temperature 0.8
+python training.py
 ```
 
-Output:
+On first run, trains a BPE tokenizer on `openwebmath.txt` and caches it to `tokenizer.json`, then encodes the corpus to `train.bin`. Training resumes automatically from `checkpoint.pt` if it exists.
 
-```
-model: 124.4M parameters
-tokenizer: 4096 tokens
+Logs every 100 steps. Validation loss and checkpoint saved every 1000 steps.
 
---- prompt ---
-CHAPTER I
---- generated ---
-CHAPTER I
-
-It was a dark and stormy night...
-```
-
-All sampling parameters:
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--prompt` | `""` | Text to condition on |
-| `--tokens` | `200` | Number of new tokens to generate |
-| `--top_k` | `50` | Keep top-k logits before sampling |
-| `--top_p` | `0.9` | Nucleus sampling: keep tokens covering top_p probability mass |
-| `--temperature` | `1.0` | Scale logits; < 1.0 sharpens distribution, > 1.0 flattens |
-
-## Using MoE
-
-Enable Sparse Mixture-of-Experts (off by default) in `train.py`:
+Default config: 4 layers, 128-dim (small, for testing). Edit `training.py` to scale up:
 
 ```python
 config = GPTConfig(
-    vocab_size=len(tok),
-    seq_len=1024,
-    n_layer=12,
-    n_head=12,
-    n_kv_head=3,
-    n_embd=768,
-    use_moe=True,   # enable sparse MoE
-    n_experts=8,    # 8 experts, top-2 routing per token
+    vocab_size=tokeniser.vocab_size,
+    sequence_length=512,
+    number_layers=12,
+    number_heads=12,
+    number_kv_heads=3,   # must divide number_heads; 12=MHA, 3=GQA, 1=MQA
+    embedding_dim=768,
 )
 ```
 
-Each token is routed to its top-2 experts. A load-balancing auxiliary loss
-(`0.01 * aux_loss`) penalizes expert collapse. Disabled by default - adds
-significant compute without benefit on small corpora.
+**Step 3 — inference**
 
-## Training
-
-Default config: 12 layers, 12 heads, 3 KV heads, 768-dim embeddings (~124M parameters).
-Effective batch: 8 sequences x 8 gradient accumulation steps = 64 sequences (~65k tokens/step).
-
-```
-train tokens: 981,986 | val tokens: 109,109
-124.4M parameters
-step     0 | loss 8.3241 | lr 0.000000
-step   100 | loss 5.1823 | lr 0.000030
-step  1000 | loss 2.8104 | lr 0.000300
-step   500 | val_loss 3.1240 | val_ppl 22.74
-step  1000 | val_loss 2.7891 | val_ppl 16.26
-...
-checkpoint saved
+```bash
+python inference.py
 ```
 
-Trains for up to 20k steps. Checkpoint saved every 500 steps alongside validation.
-LR schedule: 1000-step linear warmup, then cosine decay to 3e-5.
+Loads `checkpoint.pt` and `tokenizer.json`. Edit `inference.py` to set `chat = False` for single-prompt generation, or `True` for interactive chat (requires a finetuned checkpoint).
 
-## Files
+**Step 4 — fine-tune on chat data (optional)**
+
+Create `chat_data.json`:
+
+```json
+[
+    {"system": "You are helpful.", "user": "What is 2+2?", "assistant": "4"},
+    {"user": "What is the derivative of sin(x)?", "assistant": "cos(x)"}
+]
+```
+
+The `"system"` field is optional. Then:
+
+```bash
+python finetuning.py
+```
+
+Loss is computed only on assistant tokens (user/system tokens masked with -100).
+
+Chat format used internally:
 
 ```
-gpt.py         model: config, RMSNorm, RoPE, GQA, SwiGLU, SparseMoE, KVCache, generation
-tokenizer.py   byte-level BPE: train, encode, decode, save/load
-train.py       BPE integration, step-based loop, grad accum, val split, checkpointing
-generate.py    demo inference: load checkpoint, generate text, argparse CLI
+<|system|>You are helpful.<|end|><|user|>What is 2+2?<|end|><|assistant|>4<|end|>
 ```
 
-## References
 
-- Vaswani et al. (2017) - [Attention Is All You Need](https://arxiv.org/abs/1706.03762)
-- Su et al. (2021) - [RoFormer: Rotary Position Embedding](https://arxiv.org/abs/2104.09864)
-- Ainslie et al. (2023) - [GQA: Grouped Query Attention](https://arxiv.org/abs/2305.13245)
-- Shazeer (2020) - [GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202)
-- Fedus et al. (2022) - [Switch Transformers](https://arxiv.org/abs/2101.03961) (MoE)
-- Karpathy - [nanoGPT](https://github.com/karpathy/nanoGPT) (inspiration)
+## MoE
+
+Sparse MoE is off by default. Enable in `training.py`:
+
+```python
+config = GPTConfig(
+    ...
+    use_moe=True,          # enable sparse MoE
+    number_experts=8,      # 8 experts, top-2 routing per token
+)
+```
+
+Each token routes to 2 experts. Slows training without benefit on small corpora.
+
+---
+
+## Roadmap
+
+Roughly in priority order — each item is a meaningful step up in capability or credibility.
+
+### 1. GSM8K evaluation harness
+Measure whether training is actually working. Run the model on GSM8K grade-school math problems, extract the final numerical answer with regex, report accuracy. Even a low number is a real result; GPT-2 baseline is ~2%.
+
+### 2. GRPO — RL for math reasoning (mini DeepSeek-R1)
+The algorithm behind DeepSeek-R1. Generate N candidate solutions per problem, reward = 1 if the final answer is correct, group-normalize the rewards into advantages, update the policy with a policy-gradient loss. No critic model, no value function — ~150 lines on top of the existing training loop. Transforms the project from "I trained a small GPT" to "I built a reasoning model with RL."
+
+### 3. Process Reward Model (PRM)
+Train a second small model to score intermediate reasoning steps rather than just the final answer. Same GPT backbone, binary classifier head at each token position. Feeds back into GRPO as a richer reward signal. Same idea as OpenAI's Math-Shepherd and DeepMind's AlphaCode.
+
+### 4. Speculative decoding
+Draft/verify inference loop: a small fast model proposes K tokens, the main model verifies them in one forward pass, accept where they agree and resample where they diverge. ~80 lines, 2–3x inference speedup, shows understanding of inference-time compute.
+
+### 5. Tool use — calculator
+Model learns to emit `<|calc|>2+2<|/calc|>` tags mid-generation. Intercept the tag, run `eval()`, inject the result back into context, continue. Pairs naturally with CoT: the model reasons step by step and calls the calculator for intermediate arithmetic.

@@ -97,17 +97,24 @@ def train():
     # tokeniser.load("tokenizer.json")
     data = np.memmap("train.bin", dtype=np.int32, mode="r")
 
+    # Augment with synthetic math Q&A data if available (run gen_math_data.py to generate)
+    if os.path.exists("math_qa.bin"):
+        math_data = np.fromfile("math_qa.bin", dtype=np.int32)
+        # repeat math data 15x so it's well-represented alongside the large openwebmath corpus
+        data = np.concatenate([data, np.tile(math_data, 15)])
+        console.print(f"  [dim]math_qa.bin loaded — {len(math_data):,} tokens × 5 appended[/dim]")
+
     # train test split
     split = int(0.9 * len(data))
     train_data, val_data = data[:split], data[split:]
 
     config = GPTConfig(
         vocab_size=50304,  # 50257 base + headroom for special tokens, rounded to multiple of 64
-        sequence_length=128,
-        number_layers=4,
-        number_heads=4,
-        number_kv_heads=4,
-        embedding_dim=128,
+        sequence_length=256,
+        number_layers=8,
+        number_heads=8,
+        number_kv_heads=4,  # GQA: 2 query heads per KV head
+        embedding_dim=512,  # ~50M params — fits comfortably in 24 GB VRAM
     )
 
     model = GPT(config).to(device)
@@ -132,20 +139,20 @@ def train():
     params = sum(p.numel() for p in model.parameters()) / 1e6
     model = torch.compile(model) # optimises model for faster training (PyTorch 2.0 feature)
 
-    max_steps = 20000
-    warmup = 1000
+    max_steps = 100000
+    warmup = 2000
     max_lr = 3e-4
     min_lr = 3e-5
-    grad_accum_steps = 1
+    grad_accum_steps = 4    # effective batch = 128 × 256 × 4 ≈ 131k tokens/step; peak VRAM ~16.5 GB on RTX 3090
     eval_interval = 5000
 
     # bfloat16 only on CUDA: Metal and CPU lack hardware bfloat16 support
     autocast_dtype = torch.bfloat16 if device == "cuda" else torch.float32
     num_workers = 4
 
-    batch_size = 256
+    batch_size = 128
     train_loader = DataLoader(TokenDataset(train_data, config.sequence_length), batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=(device == "cuda"))
-    val_loader = DataLoader(TokenDataset(val_data, config.sequence_length), batch_size=256, num_workers=num_workers)
+    val_loader = DataLoader(TokenDataset(val_data, config.sequence_length), batch_size=128, num_workers=num_workers)
     train_iter = iter(train_loader)
 
     console.print(Panel(
@@ -239,7 +246,7 @@ def train():
                 # generation sample — use uncompiled model to avoid torch.compile + dynamic KV cache shape issues
                 raw_for_gen = model._orig_mod if hasattr(model, "_orig_mod") else model
                 raw_for_gen.eval()
-                prompt = "what is derivative of x^2"
+                prompt = "Q: What is the derivative of x^5?\nA:"
                 tokens = torch.tensor([enc.encode(prompt)], device=device)
                 sample = ""
                 with torch.no_grad():

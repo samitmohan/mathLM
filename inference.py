@@ -83,9 +83,9 @@ def chat_loop(model, enc, device, config, temperature=0.8, top_k=50, top_p=0.9):
 
 def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    use_chat = True
-    prompt = "Calculate the derivative of sin(x) with respect to x"
-    max_new_tokens = 100
+    use_chat = False
+    prompt = "Q: What is the derivative of x^5?\nA:"
+    max_new_tokens = 50
     temperature = 0.8
     top_k = 50
     top_p = 0.9

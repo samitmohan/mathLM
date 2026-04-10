@@ -153,13 +153,13 @@ def finetune():
     model = torch.compile(model)
     autocast_dtype = torch.bfloat16 if device == "cuda" else torch.float32
 
-    batch_size    = 16
+    batch_size    = 128
     max_steps     = 2000
     warmup        = 100
     max_lr        = 1e-4
     min_lr        = 1e-5
-    grad_accum    = 4
-    eval_interval = 200
+    grad_accum    = 2
+    eval_interval = 1000
 
     train_loader = DataLoader(ChatDataset(train_examples, enc, config.sequence_length), batch_size=batch_size, shuffle=True,  num_workers=4, pin_memory=(device == "cuda"))
     val_loader   = DataLoader(ChatDataset(val_examples,   enc, config.sequence_length), batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=(device == "cuda"))
@@ -219,7 +219,7 @@ def finetune():
             tokens_since_log += config.sequence_length * batch_size * grad_accum
             progress.update(task, advance=1)
 
-            if step % 50 == 0:
+            if step % 200 == 0:
                 now = time.time()
                 elapsed = now - t_last_log
                 tok_per_sec = tokens_since_log / elapsed if elapsed > 0 else 0

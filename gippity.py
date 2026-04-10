@@ -51,16 +51,24 @@ class KVCache:
     def __init__(self, number_layers):
         self.cached_keys, self.cached_values = [None] * number_layers, [None] * number_layers # list of key and value caches for each layer
 
-    def update(self, layer_idx, new_keys, new_values):
+    def update(self, layer_idx, new_keys, new_values, max_seq_len=None):
         # update the cache for a given layer with new keys and values
         if self.cached_keys[layer_idx] is None:
             # first time, just set the cache to the new keys and values
-            self.cached_keys[layer_idx], self.cached_values[layer_idx] = new_keys, new_values
+            self.cached_keys[layer_idx] = new_keys
+            self.cached_values[layer_idx] = new_values
         else:
             # append new keys and values to the existing cache along the sequence dimension
             self.cached_keys[layer_idx] = torch.cat([self.cached_keys[layer_idx], new_keys], dim=2)
             self.cached_values[layer_idx] = torch.cat([self.cached_values[layer_idx], new_values], dim=2)
+
+            # prevent KV cache from growing beyond sequence_length
+            if max_seq_len is not None:
+                self.cached_keys[layer_idx] = self.cached_keys[layer_idx][:, :, -max_seq_len:]
+                self.cached_values[layer_idx] = self.cached_values[layer_idx][:, :, -max_seq_len:]
+
         return self.cached_keys[layer_idx], self.cached_values[layer_idx]
+
 
 def repeat_kv(key_value_states, number_repetitions):
     '''
@@ -80,6 +88,7 @@ class CausalSelfAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.number_heads = config.number_heads
+        self.max_seq_len = config.sequence_length
         self.number_kv_heads = config.number_kv_heads if config.use_gqa else config.number_heads
         self.head_dim = config.embedding_dim // config.number_heads
         assert self.head_dim * self.number_heads == config.embedding_dim, "embedding_dim must be divisible by number_heads"
@@ -121,7 +130,7 @@ class CausalSelfAttention(nn.Module):
 
         # KV cache (inference)
         if kv_cache is not None:
-            key, value = kv_cache.update(layer_idx, key, value)
+            key, value = kv_cache.update(layer_idx, key, value, max_seq_len=self.max_seq_len)
 
         # attention
         if kv_cache is None or token_count > 1:
@@ -246,8 +255,13 @@ class GPT(nn.Module):
             offset = 0
 
         # slice cos and sin to the current token count plus any offset from cached tokens; this allows us to handle variable sequence lengths and ensures that during autoregressive decoding with KV cache, each new token gets the correct positional embedding based on its position in the overall sequence (including cached tokens)
-        cos = self.rotary_cos[offset:offset + token_count]
-        sin = self.rotary_sin[offset:offset + token_count]
+        end = offset + token_count
+        if end > self.config.sequence_length:
+            offset = max(0, self.config.sequence_length - token_count)
+            end = offset + token_count
+
+        cos = self.rotary_cos[offset:end]
+        sin = self.rotary_sin[offset:end]
         for block in self.blocks:
             hidden_states = block(hidden_states, cos, sin, kv_cache)
         hidden_states = norm(hidden_states) # final RMSNorm before the language model head
@@ -300,8 +314,16 @@ class GPT(nn.Module):
         logits, _ = self(token_ids, kv_cache=kv_cache)
 
         for _ in range(max_new_tokens):
+            if kv_cache.cached_keys[0] is not None:
+                if kv_cache.cached_keys[0].shape[2] >= self.config.sequence_length:
+                    kv_cache = KVCache(len(self.blocks))
+                    logits, _ = self(token_ids, kv_cache=kv_cache)
             next_token = self._sample_next_token(logits, temperature, top_k, top_p)
             token_ids = torch.cat((token_ids, next_token), dim=1)
+
+            # FIX: keep sequence within max length
+            if token_ids.size(1) > self.config.sequence_length:
+                token_ids = token_ids[:, -self.config.sequence_length:]
             yield next_token.item()
 
             logits, _ = self(next_token, kv_cache=kv_cache)

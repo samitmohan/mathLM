@@ -1,14 +1,30 @@
 __pycache__/
 *.pyc
 *.pyo
-*.pth
-*.pt
-wandb/
 .DS_Store
-tokenizer.json
-*.json
 
-# large data files
+# Virtualenvs
+venv/
+.venv/
+
+# Model checkpoints (regenerate with mathlm.train.* or download from HF Hub)
+*.pt
+
+# Tokenized datasets (regenerate with mathlm.data.* scripts)
 *.bin
-*.txt
+
+# Raw text corpora
 openwebmath.txt
+
+# WandB experiment logs
+wandb/
+
+# Trained tokenizer (regenerate with scripts/train_tokenizer.py)
+math_tokenizer/
+tokenizer.json
+
+# uv lockfile
+uv.lock
+
+# HuggingFace cache
+.cache/

@@ -1,2 +1,9 @@
 torch>=2.1.0
 numpy
+tiktoken
+tokenizers
+datasets
+rich
+wandb
+gradio>=4.0.0
+huggingface_hub
